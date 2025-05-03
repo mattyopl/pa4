@@ -43,11 +43,8 @@ class ContinuousPolicy(nn.Module):
         return acts
 
     def sample_action(self, x, *, smooth=False):
-        means, stds = self._mean_std(x)
-        dist = Normal(means, stds)
-        action = dist.sample()
-        logprob = self._gaussian_logp(means, stds, action)
-        return action, logprob
+        return self.forward(x, with_logp=True, smooth=smooth)
 
     def compute_log_likelihood(self, x, acts):
-        pass
+        means, stds = self._mean_std(x)
+        return torch.sum(self._gaussian_logp(means, stds, acts))

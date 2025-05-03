@@ -2,6 +2,7 @@ import math
 import torch
 import torch.nn as nn
 import torch.nn.functional as F
+from torch.distributions.normal import Normal
 
 
 class ContinuousPolicy(nn.Module):
@@ -26,7 +27,8 @@ class ContinuousPolicy(nn.Module):
         return means, stds
 
     def _gaussian_logp(self, means, stds, acts):
-        pass
+        dist = Normal(means, stds)
+        return dist.log_prob(acts)
 
     def forward(self, x, *, with_logp=False, smooth=False):
         means, stds = self._mean_std(x)
@@ -41,7 +43,11 @@ class ContinuousPolicy(nn.Module):
         return acts
 
     def sample_action(self, x, *, smooth=False):
-        pass
+        means, stds = self._mean_std(x)
+        dist = Normal(means, stds)
+        action = dist.sample()
+        logprob = self._gaussian_logp(means, stds, action)
+        return action, logprob
 
     def compute_log_likelihood(self, x, acts):
         pass

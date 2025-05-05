@@ -21,6 +21,7 @@ def batch_collection(env, policy, seed, *, total_trajectories=16, smoothing=Fals
 
     curr_trajs = [[] for _ in range(env.num_envs)]  # hold obs
     curr_rewards = [[] for _ in range(env.num_envs)]  # hold rewards
+    curr_actions = [[] for _ in range(env.num_envs)]  # hold actions
 
     num_collected = 0
 
@@ -34,15 +35,18 @@ def batch_collection(env, policy, seed, *, total_trajectories=16, smoothing=Fals
             for i in range(env.num_envs):
                 curr_trajs[i].append(obs[i])
                 curr_rewards[i].append(rewards[i])
+                curr_actions[i].append(actions[i])
 
                 done = terminated[i] or truncated[i]
                 if done:
                     trajectories.append((
                         np.array(curr_trajs[i]),
-                        np.array(curr_rewards[i])
+                        np.array(curr_rewards[i]),
+                        np.array(curr_actions[i])
                     ))
                     curr_trajs[i] = []
                     curr_rewards[i] = []
+                    curr_actions[i] = []
                     num_collected += 1
                     if num_collected >= total_trajectories:
                         break

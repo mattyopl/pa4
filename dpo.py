@@ -68,14 +68,14 @@ class DPOTrainer:
 
                         logprob_1 = 0
                         logprob_1 += self.beta * (traj1_logp)
-                        logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(traj1_state), traj1_act)
+                        logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(traj1_state, traj1_act))
 
                         logprob_2 = 0
                         logprob_2 += self.beta * (traj2_logp)
-                        logprob_2 -= self.beta * (policy_ref.compute_log_likelihood(traj2_state), traj2_act)
+                        logprob_2 -= self.beta * (policy_ref.compute_log_likelihood(traj2_state, traj2_act))
                         loss = logprob_1 + logprob_2
                         loss -= label
-                        loss = loss**2
+                        loss = loss**2 * 1/self.batch_size
 
                         self.optimizer.zero_grad()
                         loss.backward()

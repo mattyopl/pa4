@@ -61,21 +61,18 @@ class DPOTrainer:
                 if curr == n:
                     break
                 traj_0, traj_1, label = pair_data[curr]
+
+                print(len(traj_0[0])) # 3
+                
                 logprob_0 = 0
-                #print(len(traj_0))
-                for item in traj_0:
-                    state = item[0]
-                    action = item[2]
-                    logprob_0 += self.beta * (self.policy.compute_log_likelihood(state, action))
-                    logprob_0 -= self.beta* (policy_ref.compute_log_likelihood(state, action))
+                state, reward, action = traj_0
+                logprob_0 += self.beta * (self.policy.compute_log_likelihood(torch.Tensor(state), torch.Tensor(action)))
+                logprob_0 -= self.beta* (policy_ref.compute_log_likelihood(torch.Tensor(state), torch.Tensor(action)))
 
                 logprob_1 = 0
-                for item in traj_1:
-                    state = item[0]
-                    action = item[2]
-                    logprob_1 += self.beta * (self.policy.compute_log_likelihood(state, action))
-                    logprob_1 -= self.beta* (policy_ref.compute_log_likelihood(state, action))
-                    
+                state, reward, action = traj_1
+                logprob_1 += self.beta * (self.policy.compute_log_likelihood(torch.Tensor(state), torch.Tensor(action)))
+                logprob_1 -= self.beta* (policy_ref.compute_log_likelihood(torch.Tensor(state), torch.Tensor(action)))
                 loss = logprob_0 + logprob_1
                 loss -= label
                 loss = loss**2

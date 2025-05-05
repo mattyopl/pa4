@@ -84,7 +84,7 @@ def pair_trajectories(trajs, temp=1.0, seed=None):
             prob_i = np.exp(ret_i / temp) / (np.exp(ret_i / temp) + np.exp(ret_j / temp))
             label = prob_i  # Probability that i is preferred
 
-        pair_data.append((trajs[i], trajs[j], label))
+        pair_data.append({'traj1':trajs[i], 'traj2':trajs[j], 'label':label})
 
     return pair_data
 

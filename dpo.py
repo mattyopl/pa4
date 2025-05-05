@@ -49,36 +49,41 @@ class DPOTrainer:
 
     def train(self, pair_data, num_epochs_per_iter=6, num_iterations=10, seed=None):
         # TODO: implement DPO training
-        n = len(pair_data)
-        curr = 0
-
+        pairedTrajData = PairedTrajectoryDataset(pair_data)
+        dataloader = DataLoader(pairedTrajData, batch_size=self.batch_size, shuffle=True, collate_fn=PairedTrajectoryDataset.collate_fn)
 
         for iteration in range(num_iterations):
             policy_ref = self.policy
             # if not first iteration, do iterative DPO
             # otherwise, just do normal DPO
             for epoch in tqdm(range(num_epochs_per_iter), desc="Running epochs", leave=True):
-                # for traj_0, in tqdm(range(num_epochs_per_iter), desc="Running epochs", leave=True):
+                    for batch in tqdm(dataloader, desc="Running epochs", leave=True):
+                        traj1_state = batch["traj1_state"].to(self.device)   # (B, T, obs_dim)
+                        traj1_act   = batch["traj1_act"].to(self.device)     # (B, T, act_dim)
+                        traj1_logp  = batch["traj1_logp"].to(self.device)    # (B, T)
+                        traj2_state = batch["traj2_state"].to(self.device)
+                        traj2_act   = batch["traj2_act"].to(self.device)
+                        traj2_logp  = batch["traj2_logp"].to(self.device)
+                        label       = batch["label"].to(self.device)         # (B,)
 
-                for traj_0, traj_1, label in pair_data:
-                    logprob_0 = 0
-                    states, rewards, actions = traj_0
-                    for i in range(len(states)):
-                        logprob_0 += self.beta * (self.policy.compute_log_likelihood(torch.Tensor(states[i]), torch.Tensor(actions[i])))
-                        logprob_0 -= self.beta * (policy_ref.compute_log_likelihood(torch.Tensor(states[i]), torch.Tensor(actions[i])))
 
-                    logprob_1 = 0
-                    states, reward, actions = traj_1
-                    for i in range(len(states)):
-                        logprob_1 += self.beta * (self.policy.compute_log_likelihood(torch.Tensor(states[i]), torch.Tensor(actions[i])))
-                        logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(torch.Tensor(states[i]), torch.Tensor(actions[i])))
-                    loss = logprob_0 + logprob_1
-                    loss -= label
-                    loss = loss**2
 
-                    self.optimizer.zero_grad()
-                    loss.backward()
-                    self.optimizer.step()
+                        logprob_0 = 0
+                        # states, rewards, actions = traj_0
+                        # for i in range(len(states)):
+                        logprob_0 += self.beta * (self.policy.compute_log_likelihood(traj1_state), traj1_act)
+                        logprob_0 -= self.beta * (policy_ref.compute_log_likelihood(traj1_state), traj1_act)
+
+                        logprob_1 = 0
+                        logprob_1 += self.beta * (self.policy.compute_log_likelihood(traj2_state), traj2_act)
+                        logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(traj2_state), traj2_act)
+                        loss = logprob_0 + logprob_1
+                        loss -= label
+                        loss = loss**2
+
+                        self.optimizer.zero_grad()
+                        loss.backward()
+                        self.optimizer.step()
             
                 
                 

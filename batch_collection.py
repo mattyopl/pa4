@@ -22,13 +22,16 @@ def batch_collection(env, policy, seed, *, total_trajectories=16, smoothing=Fals
     curr_trajs = [[] for _ in range(env.num_envs)]  # hold obs
     curr_rewards = [[] for _ in range(env.num_envs)]  # hold rewards
     curr_actions = [[] for _ in range(env.num_envs)]  # hold actions
+    curr_logps = [[] for _ in range(env.num_envs)]  # hold logps
 
     num_collected = 0
 
     with torch.no_grad():
         while num_collected < total_trajectories:
             obs_tensor = torch.tensor(obs, dtype=torch.float32, device=device)
-            actions = policy.sample_action(obs_tensor, smooth=smoothing)[0].cpu().numpy()
+            result_sample_actions = policy.sample_action(obs_tensor, smooth=smoothing)
+            actions = result_sample_actions[0].cpu().numpy()
+            logps = result_sample_actions[1].cpu().numpy()
 
             next_obs, rewards, terminated, truncated, _ = env.step(actions)
 
@@ -36,17 +39,20 @@ def batch_collection(env, policy, seed, *, total_trajectories=16, smoothing=Fals
                 curr_trajs[i].append(obs[i])
                 curr_rewards[i].append(rewards[i])
                 curr_actions[i].append(actions[i])
+                curr_logps[i].append(logps[i])
 
                 done = terminated[i] or truncated[i]
                 if done:
                     trajectories.append((
                         np.array(curr_trajs[i]),
                         np.array(curr_rewards[i]),
-                        np.array(curr_actions[i])
+                        np.array(curr_actions[i]),
+                        np.array(curr_logps[i])
                     ))
                     curr_trajs[i] = []
                     curr_rewards[i] = []
                     curr_actions[i] = []
+                    curr_logps[i] = []
                     num_collected += 1
                     if num_collected >= total_trajectories:
                         break

@@ -51,7 +51,7 @@ class DPOTrainer:
         # TODO: implement DPO training
         pairedTrajData = PairedTrajectoryDataset(pair_data)
         dataloader = DataLoader(pairedTrajData, batch_size=self.batch_size, shuffle=True, collate_fn=PairedTrajectoryDataset.collate_fn)
-        #dataloader_iter = iter(dataloader)
+        dataloader_iter = iter(dataloader)
         for iteration in range(num_iterations):
             policy_ref = self.policy
             # if not first iteration, do iterative DPO
@@ -62,7 +62,10 @@ class DPOTrainer:
                         #except:
                         #    dataloader_iter = iter(dataloader)
                         #    batch = next(dataloader_iter)
+                    #n = 0
                     for batch in tqdm(dataloader, desc="Running batches", leave=True):
+                        #if n == 20:
+                        #    break
                         traj1_state = batch["traj1_state"].to(self.device)   # (B, T, obs_dim)
                         traj1_act   = batch["traj1_act"].to(self.device)     # (B, T, act_dim)
                         traj1_logp  = batch["traj1_logp"].to(self.device)    # (B, T)
@@ -72,26 +75,27 @@ class DPOTrainer:
                         label       = batch["label"].to(self.device)         # (B,)
                         total_loss = 0
 
-                        for i in range(self.batch_size):
+                        #print(len(traj1_state))
+                        for i in range(len(traj1_state)):
                             logprob_1 = 0
-                            logprob_1 += self.beta * (torch.sum(traj1_logp[i]))
-                            for j in range(len(traj1_state[i])):
-                                logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(traj1_state[i][j], traj1_act[i][j]))
+                            logprob_1 += self.beta * (self.policy.compute_log_likelihood(traj1_state[i], traj1_act[i]))
+                            
+                            logprob_1 -= self.beta * (torch.sum(traj1_logp[i]))
 
                             logprob_2 = 0
-                            logprob_2 += self.beta * (torch.sum(traj2_logp[i]))
-                            for j in range(len(traj1_state[i])):
-                                logprob_2 -= self.beta * (policy_ref.compute_log_likelihood(traj2_state[i][j], traj2_act[i][j]))
-                            loss = logprob_1 + logprob_2
+                            logprob_2 += self.beta * (self.policy.compute_log_likelihood(traj2_state[i], traj2_act[i]))
+                            logprob_2 -= self.beta * (torch.sum(traj2_logp[i]))
+                            loss = logprob_1 - logprob_2
                             loss -= label[i]
                             loss = loss**2
                             total_loss += loss
 
-                        total_loss = total_loss/self.batch_size
+                        total_loss = total_loss/len(traj1_state)
                         #print(total_loss.shape)
                         self.optimizer.zero_grad()
                         total_loss.backward()
                         self.optimizer.step()
+                        #n += 1
             
                 
                 

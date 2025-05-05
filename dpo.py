@@ -57,31 +57,28 @@ class DPOTrainer:
             policy_ref = self.policy
             # if not first iteration, do iterative DPO
             # otherwise, just do normal DPO
-            for epoch in range(num_epochs_per_iter):
-                if curr == n:
-                    break
-                traj_0, traj_1, label = pair_data[curr]
+            for epoch in tqdm(range(num_epochs_per_iter), desc="Running epochs", leave=True):
+                # for traj_0, in tqdm(range(num_epochs_per_iter), desc="Running epochs", leave=True):
 
-                print(len(traj_0[0])) # 3
-                
-                logprob_0 = 0
-                state, reward, action = traj_0
-                logprob_0 += self.beta * (self.policy.compute_log_likelihood(torch.Tensor(state), torch.Tensor(action)))
-                logprob_0 -= self.beta* (policy_ref.compute_log_likelihood(torch.Tensor(state), torch.Tensor(action)))
+                for traj_0, traj_1, label in pair_data:
+                    logprob_0 = 0
+                    states, rewards, actions = traj_0
+                    for i in range(len(states)):
+                        logprob_0 += self.beta * (self.policy.compute_log_likelihood(torch.Tensor(states[i]), torch.Tensor(actions[i])))
+                        logprob_0 -= self.beta * (policy_ref.compute_log_likelihood(torch.Tensor(states[i]), torch.Tensor(actions[i])))
 
-                logprob_1 = 0
-                state, reward, action = traj_1
-                logprob_1 += self.beta * (self.policy.compute_log_likelihood(torch.Tensor(state), torch.Tensor(action)))
-                logprob_1 -= self.beta* (policy_ref.compute_log_likelihood(torch.Tensor(state), torch.Tensor(action)))
-                loss = logprob_0 + logprob_1
-                loss -= label
-                loss = loss**2
+                    logprob_1 = 0
+                    states, reward, actions = traj_1
+                    for i in range(len(states)):
+                        logprob_1 += self.beta * (self.policy.compute_log_likelihood(torch.Tensor(states[i]), torch.Tensor(actions[i])))
+                        logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(torch.Tensor(states[i]), torch.Tensor(actions[i])))
+                    loss = logprob_0 + logprob_1
+                    loss -= label
+                    loss = loss**2
 
-                self.optimizer.zero_grad()
-                loss.backward()
-                self.optimizer.step()
-
-                curr += 1
+                    self.optimizer.zero_grad()
+                    loss.backward()
+                    self.optimizer.step()
             
                 
                 
@@ -109,7 +106,7 @@ def main():
         iterations = 1
 
     dpo.train(pair_data, num_iterations=iterations, seed=42, num_epochs_per_iter=hparams["num_epochs_per_iter"])
-    mean_rew, std_rew = validate_model(policy)
+    mean_rew, std_rew = validate_model(policy, env)
     print(f"Mean reward of trajectories: {mean_rew}, std: {std_rew}")
     torch.save(policy, "dpo.pt")
 

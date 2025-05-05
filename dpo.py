@@ -51,9 +51,11 @@ class DPOTrainer:
         # TODO: implement DPO training
         pairedTrajData = PairedTrajectoryDataset(pair_data)
         dataloader = DataLoader(pairedTrajData, batch_size=self.batch_size, shuffle=True, collate_fn=PairedTrajectoryDataset.collate_fn)
-        dataloader_iter = iter(dataloader)
+        #dataloader_iter = iter(dataloader)
         for iteration in range(num_iterations):
-            policy_ref = self.policy
+            if iteration != 0:
+                pairedTrajData = PairedTrajectoryDataset(collect_pair_data(self.policy))
+                dataloader = DataLoader(pairedTrajData, batch_size=self.batch_size, shuffle=True, collate_fn=PairedTrajectoryDataset.collate_fn)
             # if not first iteration, do iterative DPO
             # otherwise, just do normal DPO
             for epoch in tqdm(range(num_epochs_per_iter), desc="Running epochs", leave=True):
@@ -125,7 +127,7 @@ def main():
     dpo.train(pair_data, num_iterations=iterations, seed=42, num_epochs_per_iter=hparams["num_epochs_per_iter"])
     mean_rew, std_rew = validate_model(dpo.policy, env)
     print(f"Mean reward of trajectories: {mean_rew}, std: {std_rew}")
-    torch.save(dpo.policy, "dpo.pt")
+    torch.save(dpo.policy, "dpo_iterative.pt")
 
 if __name__ == "__main__":
     main()

@@ -65,20 +65,27 @@ class DPOTrainer:
                         traj2_act   = batch["traj2_act"].to(self.device)
                         traj2_logp  = batch["traj2_logp"].to(self.device)
                         label       = batch["label"].to(self.device)         # (B,)
+                        total_loss = 0
 
-                        logprob_1 = 0
-                        logprob_1 += self.beta * (traj1_logp)
-                        logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(traj1_state, traj1_act))
+                        for i in range(self.batch_size):
+                            logprob_1 = 0
+                            logprob_1 += self.beta * (torch.sum(traj1_logp[i]))
+                            for j in range(len(traj1_state[i])):
+                                logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(traj1_state[i][j], traj1_act[i][j]))
 
-                        logprob_2 = 0
-                        logprob_2 += self.beta * (traj2_logp)
-                        logprob_2 -= self.beta * (policy_ref.compute_log_likelihood(traj2_state, traj2_act))
-                        loss = logprob_1 + logprob_2
-                        loss -= label
-                        loss = loss**2 * 1/self.batch_size
+                            logprob_2 = 0
+                            logprob_2 += self.beta * (torch.sum(traj2_logp[i]))
+                            for j in range(len(traj1_state[i])):
+                                logprob_2 -= self.beta * (policy_ref.compute_log_likelihood(traj2_state[i][j], traj2_act[i][j]))
+                            loss = logprob_1 + logprob_2
+                            loss -= label[i]
+                            loss = loss**2
+                            total_loss += loss
 
+                        total_loss = total_loss/self.batch_size
+                        print(total_loss.shape)
                         self.optimizer.zero_grad()
-                        loss.backward()
+                        total_loss.backward()
                         self.optimizer.step()
             
                 

@@ -51,13 +51,18 @@ class DPOTrainer:
         # TODO: implement DPO training
         pairedTrajData = PairedTrajectoryDataset(pair_data)
         dataloader = DataLoader(pairedTrajData, batch_size=self.batch_size, shuffle=True, collate_fn=PairedTrajectoryDataset.collate_fn)
-
+        #dataloader_iter = iter(dataloader)
         for iteration in range(num_iterations):
             policy_ref = self.policy
             # if not first iteration, do iterative DPO
             # otherwise, just do normal DPO
             for epoch in tqdm(range(num_epochs_per_iter), desc="Running epochs", leave=True):
-                    for batch in tqdm(dataloader, desc="Running epochs", leave=True):
+                        #try:
+                        #    batch = next(dataloader_iter)
+                        #except:
+                        #    dataloader_iter = iter(dataloader)
+                        #    batch = next(dataloader_iter)
+                    for batch in tqdm(dataloader, desc="Running batches", leave=True):
                         traj1_state = batch["traj1_state"].to(self.device)   # (B, T, obs_dim)
                         traj1_act   = batch["traj1_act"].to(self.device)     # (B, T, act_dim)
                         traj1_logp  = batch["traj1_logp"].to(self.device)    # (B, T)
@@ -83,7 +88,7 @@ class DPOTrainer:
                             total_loss += loss
 
                         total_loss = total_loss/self.batch_size
-                        print(total_loss.shape)
+                        #print(total_loss.shape)
                         self.optimizer.zero_grad()
                         total_loss.backward()
                         self.optimizer.step()
@@ -114,9 +119,9 @@ def main():
         iterations = 1
 
     dpo.train(pair_data, num_iterations=iterations, seed=42, num_epochs_per_iter=hparams["num_epochs_per_iter"])
-    mean_rew, std_rew = validate_model(policy, env)
+    mean_rew, std_rew = validate_model(dpo.policy, env)
     print(f"Mean reward of trajectories: {mean_rew}, std: {std_rew}")
-    torch.save(policy, "dpo.pt")
+    torch.save(dpo.policy, "dpo.pt")
 
 if __name__ == "__main__":
     main()

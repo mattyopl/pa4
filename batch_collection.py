@@ -44,10 +44,10 @@ def batch_collection(env, policy, seed, *, total_trajectories=16, smoothing=Fals
                 done = terminated[i] or truncated[i]
                 if done:
                     trajectories.append((
-                        np.array(curr_trajs[i]),
-                        np.array(curr_rewards[i]),
-                        np.array(curr_actions[i]),
-                        np.array(curr_logps[i])
+                        np.array(curr_trajs[i])[:1000],
+                        np.array(curr_rewards[i])[:1000],
+                        np.array(curr_actions[i])[:1000],
+                        np.array(curr_logps[i])[:1000]
                     ))
                     curr_trajs[i] = []
                     curr_rewards[i] = []

@@ -52,6 +52,7 @@ class DPOTrainer:
         n = len(pair_data)
         curr = 0
 
+
         for iteration in range(num_iterations):
             policy_ref = self.policy
             # if not first iteration, do iterative DPO
@@ -61,14 +62,20 @@ class DPOTrainer:
                     break
                 traj_0, traj_1, label = pair_data[curr]
                 logprob_0 = 0
-                for state, _, action in traj_0:
+                #print(len(traj_0))
+                for item in traj_0:
+                    state = item[0]
+                    action = item[2]
                     logprob_0 += self.beta * (self.policy.compute_log_likelihood(state, action))
                     logprob_0 -= self.beta* (policy_ref.compute_log_likelihood(state, action))
 
                 logprob_1 = 0
-                for state, _, action in traj_1:
+                for item in traj_1:
+                    state = item[0]
+                    action = item[2]
                     logprob_1 += self.beta * (self.policy.compute_log_likelihood(state, action))
                     logprob_1 -= self.beta* (policy_ref.compute_log_likelihood(state, action))
+                    
                 loss = logprob_0 + logprob_1
                 loss -= label
                 loss = loss**2
@@ -105,6 +112,9 @@ def main():
         iterations = 1
 
     dpo.train(pair_data, num_iterations=iterations, seed=42, num_epochs_per_iter=hparams["num_epochs_per_iter"])
+    mean_rew, std_rew = validate_model(policy)
+    print(f"Mean reward of trajectories: {mean_rew}, std: {std_rew}")
+    torch.save(policy, "dpo.pt")
 
 if __name__ == "__main__":
     main()

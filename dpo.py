@@ -49,10 +49,25 @@ class DPOTrainer:
 
     def train(self, pair_data, num_epochs_per_iter=6, num_iterations=10, seed=None):
         # TODO: implement DPO training
+        n = len(pair_data)
+        curr = 0
         for iteration in range(num_iterations):
             # if not first iteration, do iterative DPO
             # otherwise, just do normal DPO
-            pass
+            for epoch in range(num_epochs_per_iter):
+                if curr == n:
+                    break
+                traj_0, traj_1, label = pair_data[curr]
+                loss = 0
+                for state, _, action in traj_0:
+                    loss += self.beta * (self.policy.compute_log_likelihood(state, action))
+                for state, _, action in traj_1:
+                    loss -= self.beta * (self.policy.compute_log_likelihood(state, action))
+                loss -= label
+                loss = loss**2
+                
+                
+            
 
 
 def main():

@@ -66,18 +66,14 @@ class DPOTrainer:
                         traj2_logp  = batch["traj2_logp"].to(self.device)
                         label       = batch["label"].to(self.device)         # (B,)
 
-
-
-                        logprob_0 = 0
-                        # states, rewards, actions = traj_0
-                        # for i in range(len(states)):
-                        logprob_0 += self.beta * (self.policy.compute_log_likelihood(traj1_state), traj1_act)
-                        logprob_0 -= self.beta * (policy_ref.compute_log_likelihood(traj1_state), traj1_act)
-
                         logprob_1 = 0
-                        logprob_1 += self.beta * (self.policy.compute_log_likelihood(traj2_state), traj2_act)
-                        logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(traj2_state), traj2_act)
-                        loss = logprob_0 + logprob_1
+                        logprob_1 += self.beta * (traj1_logp)
+                        logprob_1 -= self.beta * (policy_ref.compute_log_likelihood(traj1_state), traj1_act)
+
+                        logprob_2 = 0
+                        logprob_2 += self.beta * (traj2_logp)
+                        logprob_2 -= self.beta * (policy_ref.compute_log_likelihood(traj2_state), traj2_act)
+                        loss = logprob_1 + logprob_2
                         loss -= label
                         loss = loss**2
 
